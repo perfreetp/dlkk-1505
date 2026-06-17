@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/Badge';
 import { SoftwareCard } from '@/components/features/SoftwareCard';
 import { Rating } from '@/components/ui/Rating';
 import { mockSoftware } from '@/data/mockData';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore, useSoftwareStore } from '@/store/useAuthStore';
 import { cn, formatDate, formatDateShort } from '@/lib/utils';
 
 type TabType = 'favorites' | 'following' | 'downloads' | 'drafts' | 'settings';
@@ -40,6 +40,7 @@ const navItems: { id: TabType; label: string; icon: React.ComponentType<{ classN
 export default function UserProfilePage() {
   const navigate = useNavigate();
   const { user, isLoggedIn, toggleFavorite, removeDraftReview, publishReview } = useAuthStore();
+  const { addReview } = useSoftwareStore();
   const [activeTab, setActiveTab] = useState<TabType>('favorites');
 
   if (!isLoggedIn || !user) {
@@ -355,7 +356,11 @@ export default function UserProfilePage() {
                               <Button
                                 size="sm"
                                 onClick={() => {
-                                  publishReview(draft.id);
+                                  const publishedReview = publishReview(draft.id);
+                                  if (publishedReview) {
+                                    addReview(publishedReview);
+                                    navigate(`/app/${draft.softwareId}`);
+                                  }
                                 }}
                               >
                                 <Send className="w-3.5 h-3.5" />

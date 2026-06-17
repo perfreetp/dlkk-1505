@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   ChevronLeft,
@@ -22,16 +22,22 @@ import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { mockPosts, mockCurrentUser } from '@/data/mockData';
-import { cn, formatDate, generateId } from '@/lib/utils';
+import { mockCurrentUser } from '@/data/mockData';
+import { cn, formatDate } from '@/lib/utils';
 import type { ForumReply } from '@/types';
+import { useForumStore } from '@/store/useForumStore';
 
 export default function ForumPostPage() {
   const { postId } = useParams<{ postId: string }>();
   const navigate = useNavigate();
-  const postData = mockPosts.find((p) => p.id === postId) || mockPosts[0];
+  const { getPostById, addReply, togglePin, toggleHighlight, incrementViewCount, setReport } = useForumStore();
+  const post = getPostById(postId || '');
 
-  const [post, setPost] = useState(postData);
+  useEffect(() => {
+    if (postId) {
+      incrementViewCount(postId);
+    }
+  }, [postId, incrementViewCount]);
   const [replyContent, setReplyContent] = useState('');
   const [quotedReply, setQuotedReply] = useState<ForumReply | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -45,9 +51,8 @@ export default function ForumPostPage() {
   };
 
   const handleSubmitReply = () => {
-    if (!replyContent.trim()) return;
-    const newReply: ForumReply = {
-      id: generateId(),
+    if (!replyContent.trim() || !post) return;
+    addReply(post.id, {
       postId: post.id,
       content: replyContent,
       authorId: mockCurrentUser.id,
@@ -55,13 +60,6 @@ export default function ForumPostPage() {
       authorAvatar: mockCurrentUser.avatar,
       quoteReplyId: quotedReply?.id,
       quoteContent: quotedReply?.content,
-      isReported: false,
-      createdAt: new Date().toISOString(),
-    };
-    setPost({
-      ...post,
-      replies: [...post.replies, newReply],
-      replyCount: post.replyCount + 1,
     });
     setReplyContent('');
     setQuotedReply(null);
@@ -73,6 +71,9 @@ export default function ForumPostPage() {
   };
 
   const submitReport = () => {
+    if (reportTarget && reportTarget.type === 'reply') {
+      setReport(reportTarget.id, true);
+    }
     setShowReportModal(false);
     setReportContent('');
     setReportTarget(null);
@@ -89,12 +90,27 @@ export default function ForumPostPage() {
   };
 
   const handleTogglePin = () => {
-    setPost({ ...post, isPinned: !post.isPinned });
+    if (post) togglePin(post.id);
   };
 
   const handleToggleHighlight = () => {
-    setPost({ ...post, isHighlighted: !post.isHighlighted });
+    if (post) toggleHighlight(post.id);
   };
+
+  if (!post) {
+    return (
+      <div className="container py-20 text-center">
+        <p className="text-silver-500 mb-4">帖子不存在</p>
+        <button
+          onClick={() => navigate('/forum')}
+          className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-700"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          返回讨论区
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8 pb-16 max-w-4xl">

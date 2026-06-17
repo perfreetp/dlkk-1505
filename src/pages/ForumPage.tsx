@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   MessageSquare,
@@ -13,7 +13,6 @@ import {
   BookOpen,
   Lightbulb,
   Settings,
-  Filter,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -21,9 +20,9 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { Textarea } from '@/components/ui/Input';
-import { mockPosts, mockCurrentUser } from '@/data/mockData';
-import { cn, formatDate, generateId } from '@/lib/utils';
-import type { ForumPost } from '@/types';
+import { mockCurrentUser } from '@/data/mockData';
+import { useForumStore } from '@/store/useForumStore';
+import { cn, formatDate } from '@/lib/utils';
 
 type BoardType = 'all' | '系统讨论' | '软件评测' | '求助问答' | '教程分享' | '闲聊灌水';
 type SortType = 'hot' | 'newest' | 'most_replied';
@@ -39,7 +38,7 @@ const boards = [
 
 export default function ForumPage() {
   const navigate = useNavigate();
-  const [posts, setPosts] = useState<ForumPost[]>(mockPosts);
+  const { posts, addPost } = useForumStore();
   const [activeBoard, setActiveBoard] = useState<BoardType>('all');
   const [sortBy, setSortBy] = useState<SortType>('hot');
   const [search, setSearch] = useState('');
@@ -73,8 +72,7 @@ export default function ForumPage() {
 
   const handleCreatePost = () => {
     if (!newPostTitle.trim() || !newPostContent.trim()) return;
-    const newPost: ForumPost = {
-      id: generateId(),
+    const newPost = addPost({
       title: newPostTitle,
       content: newPostContent,
       authorId: mockCurrentUser.id,
@@ -82,14 +80,7 @@ export default function ForumPage() {
       authorAvatar: mockCurrentUser.avatar,
       board: newPostBoard,
       tags: newPostTags.split(/[,，\s]+/).filter(Boolean),
-      isPinned: false,
-      isHighlighted: false,
-      viewCount: 0,
-      replyCount: 0,
-      createdAt: new Date().toISOString(),
-      replies: [],
-    };
-    setPosts([newPost, ...posts]);
+    });
     setShowNewPostModal(false);
     setNewPostTitle('');
     setNewPostContent('');

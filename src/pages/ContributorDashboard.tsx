@@ -21,9 +21,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Input, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { mockSubmissions, mockSoftware } from '@/data/mockData';
+import { mockSoftware } from '@/data/mockData';
 import { cn, formatDate, formatDateShort } from '@/lib/utils';
-import type { Submission, SubmissionType } from '@/types';
+import type { SubmissionType } from '@/types';
+import { useContributorStore } from '@/store/useContributorStore';
 
 type TabType = 'submit' | 'changelog' | 'claim' | 'submissions';
 
@@ -48,7 +49,7 @@ const statusConfig = {
 
 export default function ContributorDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('submissions');
-  const [submissions, setSubmissions] = useState<Submission[]>(mockSubmissions);
+  const { submissions, addSubmission } = useContributorStore();
 
   // Submit form state
   const [softwareName, setSoftwareName] = useState('');
@@ -69,6 +70,12 @@ export default function ContributorDashboard() {
 
   const handleSubmitSoftware = () => {
     if (!softwareName.trim() || !softwareDesc.trim()) return;
+    addSubmission('software', {
+      name: softwareName,
+      description: softwareDesc,
+      category: softwareCategory,
+      link: softwareLink,
+    });
     setShowSuccessModal(true);
     setSoftwareName('');
     setSoftwareDesc('');
@@ -77,6 +84,11 @@ export default function ContributorDashboard() {
 
   const handleSubmitChangelog = () => {
     if (!selectedSoftware || !changelogVersion.trim() || !changelogContent.trim()) return;
+    addSubmission('changelog', {
+      softwareId: selectedSoftware,
+      version: changelogVersion,
+      content: changelogContent,
+    });
     setShowSuccessModal(true);
     setSelectedSoftware('');
     setChangelogVersion('');
@@ -85,6 +97,10 @@ export default function ContributorDashboard() {
 
   const handleSubmitClaim = () => {
     if (!claimSoftware || !claimReason.trim()) return;
+    addSubmission('maintainer_claim', {
+      softwareId: claimSoftware,
+      reason: claimReason,
+    });
     setShowSuccessModal(true);
     setClaimSoftware('');
     setClaimReason('');
@@ -416,7 +432,10 @@ export default function ContributorDashboard() {
           </div>
           <h3 className="text-xl font-semibold text-brand-800 mb-2">提交成功！</h3>
           <p className="text-silver-500 mb-6">你的投稿已进入审核队列，我们会尽快处理</p>
-          <Button onClick={() => setShowSuccessModal(false)}>
+          <Button onClick={() => {
+            setShowSuccessModal(false);
+            setActiveTab('submissions');
+          }}>
             查看投稿状态
           </Button>
         </div>

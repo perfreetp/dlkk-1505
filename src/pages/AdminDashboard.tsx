@@ -25,9 +25,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Input, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { mockSubmissions, mockReports, mockTopics, mockSoftware } from '@/data/mockData';
+import { mockSoftware } from '@/data/mockData';
 import { cn, formatDate } from '@/lib/utils';
 import type { Submission, ReportItem, FeaturedTopic } from '@/types';
+import { useAdminStore } from '@/store/useAdminStore';
 
 type TabType = 'submissions' | 'comments' | 'links' | 'topics';
 
@@ -49,16 +50,28 @@ const typeLabels = {
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('submissions');
-  const [submissions, setSubmissions] = useState<Submission[]>(mockSubmissions);
-  const [reports, setReports] = useState<ReportItem[]>(mockReports);
-  const [topics, setTopics] = useState<FeaturedTopic[]>(mockTopics);
+  const {
+    submissions,
+    reports,
+    topics,
+    approveSubmission,
+    rejectSubmission,
+    resolveReport,
+    toggleTopic,
+    deleteTopic,
+    createTopic,
+    updateTopic,
+  } = useAdminStore();
 
   const [reviewModal, setReviewModal] = useState<{ open: boolean; submission: Submission | null }>({ open: false, submission: null });
   const [reviewNote, setReviewNote] = useState('');
 
   const [topicModal, setTopicModal] = useState(false);
+  const [editTopicModal, setEditTopicModal] = useState<{ open: boolean; topic: FeaturedTopic | null }>({ open: false, topic: null });
   const [newTopicTitle, setNewTopicTitle] = useState('');
   const [newTopicDesc, setNewTopicDesc] = useState('');
+  const [editTopicTitle, setEditTopicTitle] = useState('');
+  const [editTopicDesc, setEditTopicDesc] = useState('');
 
   const stats = [
     { label: '待审核投稿', value: submissions.filter((s) => s.status === 'pending').length, icon: Clock, color: 'text-apple-orange' },
@@ -68,49 +81,49 @@ export default function AdminDashboard() {
   ];
 
   const handleApprove = (id: string) => {
-    setSubmissions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: 'approved', reviewNote: reviewNote || '审核通过' } : s))
-    );
+    approveSubmission(id, reviewNote);
     setReviewModal({ open: false, submission: null });
     setReviewNote('');
   };
 
   const handleReject = (id: string) => {
-    setSubmissions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: 'rejected', reviewNote: reviewNote || '审核未通过' } : s))
-    );
+    rejectSubmission(id, reviewNote);
     setReviewModal({ open: false, submission: null });
     setReviewNote('');
   };
 
   const handleResolveReport = (id: string, resolved: boolean) => {
-    setReports((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: resolved ? 'resolved' : 'dismissed' } : r))
-    );
+    resolveReport(id, resolved);
   };
 
   const handleToggleTopic = (id: string) => {
-    setTopics((prev) => prev.map((t) => (t.id === id ? { ...t, isActive: !t.isActive } : t)));
+    toggleTopic(id);
   };
 
   const handleDeleteTopic = (id: string) => {
-    setTopics((prev) => prev.filter((t) => t.id !== id));
+    deleteTopic(id);
   };
 
   const handleCreateTopic = () => {
     if (!newTopicTitle.trim()) return;
-    const newTopic: FeaturedTopic = {
-      id: Date.now().toString(),
-      title: newTopicTitle,
-      description: newTopicDesc,
-      softwareIds: [],
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    };
-    setTopics([newTopic, ...topics]);
+    createTopic(newTopicTitle, newTopicDesc);
     setTopicModal(false);
     setNewTopicTitle('');
     setNewTopicDesc('');
+  };
+
+  const handleOpenEditTopic = (topic: FeaturedTopic) => {
+    setEditTopicTitle(topic.title);
+    setEditTopicDesc(topic.description);
+    setEditTopicModal({ open: true, topic });
+  };
+
+  const handleUpdateTopic = () => {
+    if (!editTopicModal.topic || !editTopicTitle.trim()) return;
+    updateTopic(editTopicModal.topic.id, editTopicTitle, editTopicDesc);
+    setEditTopicModal({ open: false, topic: null });
+    setEditTopicTitle('');
+    setEditTopicDesc('');
   };
 
   return (
@@ -405,7 +418,7 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="secondary" size="sm">
+                          <Button variant="secondary" size="sm" onClick={() => handleOpenEditTopic(topic)}>
                             <Edit3 className="w-3.5 h-3.5" />
                             编辑
                           </Button>
@@ -517,6 +530,42 @@ export default function AdminDashboard() {
             </Button>
             <Button onClick={handleCreateTopic} disabled={!newTopicTitle.trim()}>
               创建专题
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Topic Modal */}
+      <Modal
+        isOpen={editTopicModal.open}
+        onClose={() => setEditTopicModal({ open: false, topic: null })}
+        title="编辑专题"
+        size="md"
+      >
+        <div className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-brand-700 mb-2">专题标题 *</label>
+            <Input
+              placeholder="例如：2024 年效率工具精选"
+              value={editTopicTitle}
+              onChange={(e) => setEditTopicTitle(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-brand-700 mb-2">专题描述</label>
+            <Textarea
+              placeholder="简要介绍这个专题"
+              rows={3}
+              value={editTopicDesc}
+              onChange={(e) => setEditTopicDesc(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-silver-100">
+            <Button variant="secondary" onClick={() => setEditTopicModal({ open: false, topic: null })}>
+              取消
+            </Button>
+            <Button onClick={handleUpdateTopic} disabled={!editTopicTitle.trim()}>
+              保存修改
             </Button>
           </div>
         </div>

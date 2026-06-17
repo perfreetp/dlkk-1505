@@ -78,7 +78,7 @@ export default function AppDetailPage() {
     setCurrentScreenshotIndex((i) => (i + 1) % software.screenshots.length);
   };
 
-  const handleDownload = (source: string) => {
+  const handleDownload = (source: string, url?: string) => {
     addDownload({
       softwareId: software.id,
       softwareName: software.name,
@@ -86,6 +86,9 @@ export default function AppDetailPage() {
       downloadedAt: new Date().toISOString(),
       source,
     });
+    if (url) {
+      window.open(url, '_blank');
+    }
   };
 
   const handleSaveDraft = () => {
@@ -146,7 +149,7 @@ export default function AppDetailPage() {
               <Heart className={cn('w-4 h-4', favorited && 'fill-apple-red text-apple-red')} />
               {favorited ? '已收藏' : '收藏'}
             </Button>
-            <Button size="sm" onClick={() => handleDownload('官方')}>
+            <Button size="sm" onClick={() => handleDownload('官方下载', software.downloadLinks.official || software.downloadLinks.appStore || software.downloadLinks.local)}>
               <Download className="w-4 h-4" />
               下载
             </Button>
@@ -225,7 +228,7 @@ export default function AppDetailPage() {
                   {software.downloadLinks.official && (
                     <Button
                       fullWidth
-                      onClick={() => handleDownload('官方下载')}
+                      onClick={() => handleDownload('官方下载', software.downloadLinks.official)}
                       className="justify-between"
                     >
                       <span className="flex items-center gap-2">
@@ -236,7 +239,7 @@ export default function AppDetailPage() {
                     </Button>
                   )}
                   {software.downloadLinks.appStore && (
-                    <Button variant="secondary" fullWidth className="justify-between" onClick={() => handleDownload('App Store')}>
+                    <Button variant="secondary" fullWidth className="justify-between" onClick={() => handleDownload('App Store', software.downloadLinks.appStore)}>
                       <span className="flex items-center gap-2">
                         <Apple className="w-4 h-4" />
                         App Store
@@ -245,7 +248,7 @@ export default function AppDetailPage() {
                     </Button>
                   )}
                   {software.downloadLinks.local && (
-                    <Button variant="secondary" fullWidth className="justify-between" onClick={() => handleDownload('本地下载')}>
+                    <Button variant="secondary" fullWidth className="justify-between" onClick={() => handleDownload('本地下载', software.downloadLinks.local)}>
                       <span className="flex items-center gap-2">
                         <Download className="w-4 h-4" />
                         本地下载
